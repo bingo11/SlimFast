@@ -3,15 +3,20 @@ package edu.hawaii.himb.slimfast;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.List;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
 
 public class Signature{
+	public static int instanceCounter =0;
+	
 	public boolean visited= false;
 	public double signature;
-	public List<Integer> sequences = new ArrayList<Integer>();
+	
+	public int signatureId=0;
+	public List<Integer> sequences = new LinkedList<Integer>();
 	
 	public int bandId; // the band number that was used to generate this signature
 	
@@ -19,11 +24,18 @@ public class Signature{
 	      public int compare(Integer s1, Integer s2) {
 	    	return (s1).compareTo(s2);
 	      }
+	      
 	};
 	
 	
 	public Signature(double signature){
 		this.signature = signature;
+		//signatureId is its sequential number
+		signatureId = instanceCounter; 
+		instanceCounter++;
+		//System.out.println("this sig is "+signatureId+"max number of sigs is "+instanceCounter);
+		
+
 	}
 	
 	public void addSequenceSign(int seq){
