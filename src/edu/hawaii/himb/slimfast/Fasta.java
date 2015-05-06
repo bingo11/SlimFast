@@ -17,7 +17,6 @@ public class Fasta {
 	private int nbSequences;
 	private BufferedReader buffReader;
 
-    System.out.println("");
 	
     private List<String> headers;
     private List<String> sequences;

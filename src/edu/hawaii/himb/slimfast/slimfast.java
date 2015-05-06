@@ -79,31 +79,37 @@ public class slimfast {
 	
 
 
+	//public static void build 
 	
 	
-//	public static int nbKmerMatches(Sequence seq1, Sequence[] otherSeq){
-//		int nbSeqMatches=0;
-//		for (Sequence seq2: otherSeq){
-//			if (seq1.seqId == seq2.seqId)
-//				continue;
-//			int nbKmerMatches = 0;
-//			for (int i=0; i< seq1.kmersVec.length; i++){
-//				if ((seq1.kmersVec[i] == seq2.kmersVec[i])){
-//					// TODO make sure that the signature is not mostly 0's for those sequences in that cluster
-//					nbKmerMatches++;
-//				}
-//			}
-////			System.out.println(" Seq1:"+seq1.seqId+" Seq2:"+seq2.seqId+" have "+nbKmerMatches+" signature sizes in common");
-////			System.out.println("Seq1"+Arrays.toString(seq1.kmersVec));					
-////			System.out.println("Seq2"+Arrays.toString(seq2.kmersVec));
-//			
-//			if (nbKmerMatches >= MIN_NB_KMER_MATCHES){
-//				nbSeqMatches++;
-//			}
-//		}
-//		return nbSeqMatches;
-//	}
 	
+	public static boolean findSignatureWithAllOneEdge(Signature sig, List<Sequence> seqs, Map<Double, Signature> signatures){
+		Multiset<Double> neighborSigs = HashMultiset.create();
+	
+		for(int seqId: sig.sequences){
+			Sequence seq = seqs.get(seqId);
+			for (Signature seqSig: seq.signatures){
+				if (seqSig != null){
+					neighborSigs.add(seqSig.signature);
+				}
+			}
+		}
+		neighborSigs.remove(sig.signature);
+		// Anyway to speed this up?
+		int countNbNonOne=0;
+		for (Entry<Double> count: neighborSigs.entrySet()){
+			if (count.getCount()>1){
+				countNbNonOne++;
+				if (countNbNonOne >=8){
+					return false;
+				}
+				//System.out.println("For sig "+sig.signature+" the counts are "+count.toString());
+				//return false;
+			}
+		}
+		return true;
+		
+	}	
 	
 	public static void droppingLargeClusters(List<Sequence> seqs, Map<Double, Signature> signatures, int[][] bands){
 		List<Signature> largeSigs = new ArrayList<Signature>();
@@ -128,15 +134,22 @@ public class slimfast {
 	}
 	
 	
-	public static void removeSingleValSigs(Map<Double, Signature> signatures, Utils utils){
-		int nbDropped=0;
-		for (int prime : utils.primes_257){
-			if (signatures.containsKey(prime)){
-				signatures.remove(prime);
-				nbDropped++;
-			}	
-		}
-	}
+//	public static void removeSingleValSigs(List<Sequence> seqs, Map<Double, Signature> signatures, Utils utils){
+//		int nbDropped=0;
+//		for (int prime : utils.primes_257){
+//			if (signatures.containsKey(prime)){
+//				System.out.println("removing prime signature:"+prime);
+//				removeSignature( signatures.get((double) prime), seqs, signatures);
+//				nbDropped++;
+//			}	
+//		}
+//		//remove the zero sig as well
+//		removeSignature( signatures.get(0.0), seqs, signatures);
+//		nbDropped++;
+//	}
+	
+	
+	
 	
 	public static int numberOfFinalMutations(int[] positions){
 		//System.out.println("myPOsitions"+Arrays.toString(positions));
@@ -280,21 +293,23 @@ public class slimfast {
 		Sequence seq1 = seqs.get(seq1Id);
 		Sequence seq2 = seqs.get(seq2Id);
 		int nbSimilarSigs = 0;
+		
 		for (int i=0; i<seq1.signatures.length; i++){
 			if ((seq1.signatures[i]!=null) && (seq1.signatures[i]==seq2.signatures[i])){
 				nbSimilarSigs++;
 			}
 		}
 		//TODO Move this in the For loop
-
 		if (nbSimilarSigs >= minSimilarSigs){
-			System.out.println("Seq1 "+seq1.seqId+" seq2 "+seq2.seqId+" have "+nbSimilarSigs+" shared signatures");
+			//System.out.println("Seq1 "+seq1.seqId+" seq2 "+seq2.seqId+" have "+nbSimilarSigs+" shared signatures");
 			return true;
+		}else{
+			//System.out.println("Seq1 "+seq1.seqId+" seq2 "+seq2.seqId+" are not similar and have only "+nbSimilarSigs+" shared signatures");
+			return false;
 		}
-
-		//System.out.println("Seq1 "+seq1.seqId+" seq2 "+seq2.seqId+" are not similar and have only "+nbSimilarSigs+" shared signatures");
-		return false;
 	}
+	
+
 	
 
 	public static void findAbherrentSigsUsingKmers(int[][] bands, List<Sequence> seqs, Map<Double, Signature> signatures, int[] correct_clusters){
@@ -312,7 +327,6 @@ public class slimfast {
 			
 			clusters.clear();
 			outliersList.clear();
-	
 			
 			String line = "";
 			
@@ -321,7 +335,6 @@ public class slimfast {
 			
 			List<Integer> reps =new ArrayList(sig.sequences);
 			Multiset<Integer>  counts = HashMultiset.create();
-			
 			
 			if (sig.sequences.size() > MIN_NUM_COMPS){
 				Collections.shuffle(reps);
@@ -349,6 +362,7 @@ public class slimfast {
 				reps =sig.sequences;
 			}
 			
+
 			
 			//Process the sequences in the the signature
 			for (int seqId: sig.sequences){
@@ -375,12 +389,29 @@ public class slimfast {
 
 			}
 			
+//			// Printing out the signatures for the sequences
+//			for (int seqId: sig.sequences){
+//				System.out.print(seqId+" ");
+//				int nbPerfectCols =0;
+//				
+//				for (Signature s: seqs.get(seqId).signatures){
+//					if (s != null){
+//						System.out.print(s.signatureId+" ");
+//					}else{
+//						System.out.print("-1 ");
+//					}
+//				}
+//				System.out.print("\n");
+//			}
+			
+			
+			
 			if (clusters.size() >1){
-				System.out.println("myCounts for this signature"+counts.toString());
+				//System.out.println("myCounts for this signature"+counts.toString());
 				if (outliersList.size()>=1){
-					System.out.println("DETECTED:CORRECT "+Arrays.toString(outliersList.toArray())+"\t_SIG_:"+sig.signature+":"+sig.sequences.size()+" has duplicates "+clusters.size()+"\t"+line);
+					//System.out.println("DETECTED:CORRECT "+Arrays.toString(outliersList.toArray())+"\t_SIG_:"+sig.signature+":"+sig.sequences.size()+" has duplicates "+clusters.size()+"\t"+line);
 				}else{
-					System.out.println("NOT_DETECTED _SIG_ "+sig.signature+":"+sig.sequences.size()+" has duplicates "+clusters.size()+"\t"+line);
+					//System.out.println("NOT_DETECTED _SIG_ "+sig.signature+":"+sig.sequences.size()+" has duplicates "+clusters.size()+"\t"+line);
 				}				
 			}else{
 				if (outliersList.size()>1){
@@ -391,7 +422,7 @@ public class slimfast {
 			}
 			totalProcessed++;
 			if (totalProcessed % 100000 ==0){
-				System.out.println("Number of Signatures Processed = "+totalProcessed);
+				//System.out.println("Number of Signatures Processed = "+totalProcessed);
 			}
 		}
 		
@@ -573,11 +604,12 @@ public class slimfast {
 		List<Signature> suspicousSigs = new ArrayList<Signature>();
 		Iterator<Signature> i = signatures.values().iterator();
 		for(Signature sig: signatures.values()){
-			if ((sig.sequences.size() == 1) || (sig.sequences.size() > 500) ){
+			if ((sig.sequences.size() == 1)){
 				suspicousSigs.add(sig);
 			}
 		}
 		for (Signature sig: suspicousSigs){
+			//System.out.print("remove singelton ");
 			removeSignature(sig, seqs, signatures);
 		}
 	}
@@ -664,12 +696,11 @@ public class slimfast {
 
 	
 	public static void removeSignature(Signature sig, List<Sequence> seqs, Map<Double, Signature> signatures){
+	
+		//System.out.println("Sig:"+sig.signature+" has sequences "+Arrays.toString(sig.sequences.toArray()));
 		for (int seqId: sig.sequences){
 			//REMOVE THIS CHECK AFTER VALIDATING THE seqId = seqs.get(seqId).seqId
-			if (seqId != seqs.get(seqId).seqId){
-				System.out.println("ERROR IN removeSiganture: seqId != seqs.get(seqId).seqId ");
-				System.exit(0);
-			}
+			//System.out.println("remove sig "+sig.signature+" from seqId ["+seqId+"");
 			seqs.get(seqId).signatures[sig.bandId]=null;
 		}
 		signatures.remove(sig.signature);
@@ -685,7 +716,10 @@ public class slimfast {
 			int position = sig.getPosition(seqId);
 			sig.sequences.remove(position);
 			seqs.get(seqId).signatures[sig.bandId]=null;
+			//System.out.println("remove sig for sequence "+seqId);
+
 		}
+		
 		//for thread safete not remove this here. Do another look 
 		//		if (sig.sequences.size() ==0)
 		//			signatures.remove(sig.signature);
@@ -744,7 +778,7 @@ public class slimfast {
 		int [][] bands = myFasta.getRandomSamples(nbSubsets, subsetSize);
 
 		
-		
+				
 		
 		
 		System.out.println("Number of bands is: "+bands.length);
@@ -753,6 +787,9 @@ public class slimfast {
 		long s = System.nanoTime();
 		int subsetNumber = 0; // this is the band number
 		int bandNumber=0;
+		
+			
+		
 		
 		for (int [] band: bands){
 			System.out.println(subsetNumber+"\t"+Arrays.toString(band));
@@ -781,8 +818,12 @@ public class slimfast {
 				System.out.println("Done cleaning: number of remaining signatures is: "+signatures.size());
 				s = System.nanoTime();
 			}
-		bandNumber++;
+
+			
+			bandNumber++;
 		}
+		// remove the singletons from the remaining bands
+		removeSingletons(seqs, signatures);
 		System.out.println("--------------------------------------------------------------");
 	
 		
@@ -823,30 +864,107 @@ public class slimfast {
 //		}
 			
 		
-			
-		
-
-		
-		System.out.println("updating signature sizes: "+(System.nanoTime() - startTime)/1000000000);
-		for (Sequence seq: seqs){
-			for (int i=0; i< nbSubsets; i++){
-				if (seq.signatures[i] != null)
-					seq.sigSizes[i]= seq.signatures[i].sequences.size();
-			}
-		}
-		System.out.println("Done computing signature sizes: "+(System.nanoTime() - startTime)/1000000000);
-
 		System.out.println("Dropping large signatures: "+(System.nanoTime() - startTime)/1000000000);
 		droppingLargeClusters(seqs, signatures, bands); //cluster is a signature!!!!!
 		System.out.println("Done Dropping large signatures: "+(System.nanoTime() - startTime)/1000000000);
 
-		System.out.println("Dropping signatures with prime values: "+(System.nanoTime() - startTime)/1000000000);
-		removeSingleValSigs(signatures, utils); // if signatue equals the prime number, then remove
-		System.out.println("Done Dropping signatures with prime values: "+(System.nanoTime() - startTime)/1000000000);
+		//findAbherrentSigsUsingKmers(bands, seqs, signatures, correct_clusters);
+		//System.out.println("Done identifying outliers in all signatures"+(System.nanoTime() - startTime)/1000000000);
+
+		
+		
+		System.out.println("Checking out a signatures of size 2 "+((System.nanoTime() - s)/1000000000));
+		List<Signature> sigsToRemove = new ArrayList<Signature>();
+		int nbTwos=0;
+		for(Signature sig: signatures.values()){
+			if ((sig.sequences.size()==2)){
+				if(findSignatureWithAllOneEdge(sig, seqs, signatures)==true){
+					//System.out.println("Yes, all one "+sig.signature+ " with "+sig.sequences.size()+" Sequences");
+					nbTwos++;
+					sigsToRemove.add(sig);
+					
+				}
+			}
+		}
+		for (Signature sig: sigsToRemove){
+			removeSignature(sig, seqs, signatures);
+		}
+		System.out.println("nb 2 removed is:"+nbTwos);
+		System.out.println("DONE checking out a signature of size 2  sequences "+((System.nanoTime() - s)/1000000000));
+		
+//		System.out.println("Checking out a signatures of size 3 "+((System.nanoTime() - s)/1000000000));
+//		sigsToRemove.clear();
+//		nbTwos=0;
+//		for(Signature sig: signatures.values()){
+//			if (sig.sequences.size()==3){
+//				if(findSignatureWithAllOneEdge(sig, seqs, signatures)==true){
+//					//System.out.println("Yes, all one "+sig.signature+ " with "+sig.sequences.size()+" Sequences");
+//					nbTwos++;
+//					sigsToRemove.add(sig);
+//					
+//				}
+//			}
+//		}
+//		for (Signature sig: sigsToRemove){
+//			removeSignature(sig, seqs, signatures);
+//		}
+//		System.out.println("nb 3 removed is:"+nbTwos);
+//		System.out.println("DONE checking out a signature of size 4  sequences "+((System.nanoTime() - s)/1000000000));
+//		sigsToRemove.clear();
+//		nbTwos=0;
+//		for(Signature sig: signatures.values()){
+//			if (sig.sequences.size()==4){
+//				if(findSignatureWithAllOneEdge(sig, seqs, signatures)==true){
+//					//System.out.println("Yes, all one "+sig.signature+ " with "+sig.sequences.size()+" Sequences");
+//					nbTwos++;
+//					sigsToRemove.add(sig);
+//					
+//				}
+//			}
+//		}
+//		for (Signature sig: sigsToRemove){
+//			removeSignature(sig, seqs, signatures);
+//		}
+//		System.out.println("nb 4 removed is:"+nbTwos);
+//		System.out.println("DONE checking out a signature of size 4  sequences "+((System.nanoTime() - s)/1000000000));
+//		
+//		sigsToRemove.clear();
+//		nbTwos=0;
+//		for(Signature sig: signatures.values()){
+//			if (sig.sequences.size()==5){
+//				if(findSignatureWithAllOneEdge(sig, seqs, signatures)==true){
+//					//System.out.println("Yes, all one "+sig.signature+ " with "+sig.sequences.size()+" Sequences");
+//					nbTwos++;
+//					sigsToRemove.add(sig);
+//					
+//				}
+//			}
+//		}
+//		for (Signature sig: sigsToRemove){
+//			removeSignature(sig, seqs, signatures);
+//		}
+//		System.out.println("nb 5 removed is:"+nbTwos);
+//		System.out.println("DONE checking out a signature of size 5  sequences "+((System.nanoTime() - s)/1000000000));
+//		System.exit(0);
+//	
+		
+		
+
+		
+//		System.out.println("updating signature sizes: "+(System.nanoTime() - startTime)/1000000000);
+//		for (Sequence seq: seqs){
+//			for (int i=0; i< nbSubsets; i++){
+//				if (seq.signatures[i] != null)
+//					seq.sigSizes[i]= seq.signatures[i].sequences.size();
+//			}
+//		}
+//		System.out.println("Done computing signature sizes: "+(System.nanoTime() - startTime)/1000000000);
+
+
+//		System.out.println("Dropping signatures with prime values: "+(System.nanoTime() - startTime)/1000000000);
+//		removeSingleValSigs(seqs, signatures, utils); // if signatue equals the prime number, then remove
+//		System.out.println("Done Dropping signatures with prime values: "+(System.nanoTime() - startTime)/1000000000);
 	
-		//findAbherrentSequences(seqs, signatures, correct_clusters);
-		findAbherrentSigsUsingKmers(bands, seqs, signatures, correct_clusters);
-		System.out.println("Done identifying outliers in all signatures"+(System.nanoTime() - startTime)/1000000000);
 
 		
 		
